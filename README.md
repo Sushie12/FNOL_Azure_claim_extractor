@@ -23,16 +23,16 @@ Field Extraction(14)-
   - "Asset Details": Vehicle Make, Vehicle Plate Number.
 
 Data Validation-
-  Applied null-handling logic for empty values.
-  Set mandatory fields as:["Policy No", "Policyholder Name", "Carrier", "Estimate Amount"]
-  Implemented regex patterns for complex field extraction. Eg: Time field where AM,PM are checkboxed. InjuredName field comprising of multi-line text entries.
+  - Applied null-handling logic for empty values.
+  - Set mandatory fields as:["Policy No", "Policyholder Name", "Carrier", "Estimate Amount"]
+  - Implemented regex patterns for complex field extraction. Eg: Time field where AM,PM are checkboxed. InjuredName field comprising of multi-line text entries.
 
 Routing Logic-
    Applied routing rules strictly in the priority order-
-    i)  If any mandatory field is missing- Manual Review.
-    ii) If estimate damage<25000- FastTrack.
-    iii)If description contains 'inconsistent,'fraud','staged'- Investigation Flag.
-    iv) If any person is injured- Specalist Queue.
+    i.  If any mandatory field is missing- Manual Review.
+    ii. If estimate damage<25000- FastTrack.
+    iii.If description contains 'inconsistent,'fraud','staged'- Investigation Flag.
+    iv. If any person is injured- Specalist Queue.
 
 
 OUTPUT FOR Pdf1.pdf:
