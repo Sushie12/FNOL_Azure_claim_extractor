@@ -8,20 +8,19 @@ OBJECTIVE: Build a lightweight agent that,
 DATA: Created 4 dummy PDFs using the provided editable FNOL templates.
 
 DEVELOPMENT ENVIRONMENT:
-  IDE: Visual Studio Code
-  Language: Python
-  Cloud Service: Microsoft Azure Document Intelligence
-  Authentication: Azure Endpoint and API Key
+  - IDE: Visual Studio Code
+  - Language: Python
+  - Cloud Service: Microsoft Azure Document Intelligence
+  - Authentication: Azure Endpoint and API Key
 
 WORKING:
-Azure Integration-
-     Connected Visual Studio Code to Azure Document Intelligence using endpoint and API key credentials for document processing.
+Azure Integration- Connected Visual Studio Code to Azure Document Intelligence using endpoint and API key credentials for document processing.
 
 Field Extraction(14)-
-    "Policy Information": Policy No., PolicyHolder Name, PolicyHolder Email, Carrier,
-    "Incident Information": Date Of Loss, Time ,Location ,Estimated Damage ,Injured,
-    "Involved Parties": Agency, Contact Name, Contact Email,
-    "Asset Details": Vehicle Make, Vehicle Plate Number.
+  - "Policy Information": Policy No., PolicyHolder Name, PolicyHolder Email, Carrier,
+  - "Incident Information": Date Of Loss, Time ,Location ,Estimated Damage ,Injured,
+  - "Involved Parties": Agency, Contact Name, Contact Email,
+  - "Asset Details": Vehicle Make, Vehicle Plate Number.
 
 Data Validation-
   Applied null-handling logic for empty values.
