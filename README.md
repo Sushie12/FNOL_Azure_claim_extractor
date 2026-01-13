@@ -5,7 +5,7 @@ OBJECTIVE: Build a lightweight agent that,
 - Identifies missing or inconsistent fields.
 - Classifies the claim and routes it to the correct workflow.
 
-DATA: Created 4 dummy PDFs using the provided editable FNOL templates.
+DATA: Created 4 dummy PDFs using the provided editable FNOL template.
 
 DEVELOPMENT ENVIRONMENT:
   - IDE: Visual Studio Code
@@ -14,9 +14,10 @@ DEVELOPMENT ENVIRONMENT:
   - Authentication: Azure Endpoint and API Key
 
 WORKING:
-Azure Integration- Connected Visual Studio Code to Azure Document Intelligence using endpoint and API key credentials for document processing.
 
-Field Extraction(14)-
+Azure Integration-Connected Visual Studio Code to Azure Document Intelligence using endpoint and API key credentials for document processing.
+
+Fields Extracted(14)-
   - "Policy Information": Policy No., PolicyHolder Name, PolicyHolder Email, Carrier,
   - "Incident Information": Date Of Loss, Time ,Location ,Estimated Damage ,Injured,
   - "Involved Parties": Agency, Contact Name, Contact Email,
@@ -29,10 +30,10 @@ Data Validation-
 
 Routing Logic-
    Applied routing rules strictly in the priority order-
-    i.  If any mandatory field is missing- Manual Review.
-    ii. If estimate damage<25000- FastTrack.
-    iii.If description contains 'inconsistent,'fraud','staged'- Investigation Flag.
-    iv. If any person is injured- Specalist Queue.
+    I. If any mandatory field is missing- Manual Review.
+    II. If estimate damage<25000- FastTrack.
+    III. If description contains 'inconsistent,'fraud','staged'- Investigation Flag.
+    IV. If any person is injured- Specalist Queue.
 
 
 OUTPUT FOR Pdf1.pdf:
