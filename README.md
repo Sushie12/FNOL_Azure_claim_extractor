@@ -30,10 +30,10 @@ Data Validation-
 
 Routing Logic-
    Applied routing rules strictly in the priority order-
-    - I. If any mandatory field is missing- Manual Review.
-    - II. If estimate damage<25000- FastTrack.
-    - III. If description contains 'inconsistent,'fraud','staged'- Investigation Flag.
-    - IV. If any person is injured- Specalist Queue.
+    - I)If any mandatory field is missing- Manual Review.
+    - II)If estimate damage<25000- FastTrack.
+    - III)If description contains 'inconsistent,'fraud','staged'- Investigation Flag.
+    - IV)If any person is injured- Specalist Queue.
 
 
 OUTPUT FOR Pdf1.pdf:
