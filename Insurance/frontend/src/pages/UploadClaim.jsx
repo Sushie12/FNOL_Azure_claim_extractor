@@ -22,14 +22,11 @@ try {
   setLoading(true);
   setMessage("");
 
-  const token = localStorage.getItem("token");
-
   const formData = new FormData();
   formData.append("file", file);
 
   await api.post("/upload", formData, {
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "multipart/form-data",
     },
   });
@@ -42,7 +39,11 @@ try {
   }, 1000);
 } catch (error) {
   console.error(error);
-  setMessage("Upload failed");
+  setMessage(
+    error.deniedMessage ||
+      error.response?.data?.detail ||
+      "Upload failed"
+  );
 } finally {
   setLoading(false);
 }
