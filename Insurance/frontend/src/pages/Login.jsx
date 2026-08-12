@@ -136,9 +136,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -153,6 +155,7 @@ export default function Login() {
       });
 
       localStorage.setItem("token", response.data.access_token);
+      await refreshUser();
       navigate("/");
     } catch (err) {
       setError("Invalid email or password");

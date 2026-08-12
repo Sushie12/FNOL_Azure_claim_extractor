@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
 const navigate = useNavigate();
+const { user, hasRole, logout } = useAuth();
 
 const [claims, setClaims] = useState([]);
 const [page, setPage] = useState(1);
@@ -19,15 +21,8 @@ try {
 setLoading(true);
 
 
-  const token = localStorage.getItem("token");
-
   const response = await api.get(
-    `/claims?page=${pageNumber}&size=5`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
+    `/claims?page=${pageNumber}&size=5`
   );
 
   setClaims(response.data.claims || []);
@@ -41,8 +36,8 @@ setLoading(true);
 
 };
 
-const logout = () => {
-localStorage.removeItem("token");
+const handleLogout = () => {
+logout();
 navigate("/login");
 };
 
@@ -64,22 +59,37 @@ boxShadow: "0 2px 6px rgba(0,0,0,0.15)"
 <p style={{ margin: "4px 0 0", fontSize: "0.9rem", color: "#cbd5e1" }}>
 Claims management portal </p> </div>
 
-```
-    <div style={{ display: "flex", gap: "0.75rem" }}>
-      <button
-        onClick={() => navigate("/upload")}
-        style={{
-          background: "#2563eb",
-          color: "white",
-          border: "none",
-          padding: "10px 16px",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontWeight: 600
-        }}
-      >
-        Upload a Claim
-      </button>
+    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+      {user && (
+        <span
+          style={{
+            background: "#1e293b",
+            border: "1px solid #334155",
+            padding: "6px 12px",
+            borderRadius: "999px",
+            fontSize: "0.85rem"
+          }}
+        >
+          {user.email} · <strong>{user.role}</strong>
+        </span>
+      )}
+
+      {hasRole("Admin", "Analyst") && (
+        <button
+          onClick={() => navigate("/upload")}
+          style={{
+            background: "#2563eb",
+            color: "white",
+            border: "none",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: 600
+          }}
+        >
+          Upload a Claim
+        </button>
+      )}
 
       <button
         onClick={() => navigate("/dashboard")}
@@ -97,7 +107,7 @@ Claims management portal </p> </div>
       </button>
 
       <button
-        onClick={logout}
+        onClick={handleLogout}
         style={{
           background: "#ef4444",
           color: "white",

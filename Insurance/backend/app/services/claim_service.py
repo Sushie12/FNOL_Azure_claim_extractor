@@ -7,6 +7,12 @@ from app.models.claim import Claim
 from app.schemas.claim import ClaimListResponse,ClaimResponse
 
 from app.services.extraction_service import extract_to_json_format
+from app.utils.permissions import (
+    VALID_STATUSES,
+    TERMINAL_STATUSES,
+    can_set_status,
+    can_reopen,
+)
 UPLOAD_FOLDER = "uploads"
 
 import os
@@ -379,7 +385,8 @@ def get_initial_claim_status(recommended_route: str):
 def update_claim_status(
     db: Session,
     claim_id: int,
-    new_status: str
+    new_status: str,
+    role: str
 ):
     claim = (
         db.query(Claim)
@@ -393,19 +400,43 @@ def update_claim_status(
             detail="Claim not found."
         )
 
-    valid_statuses = [
-        "Pending Review",
-        "Investigation In Progress",
-        "Specialist Assigned",
-        "Approved",
-        "Rejected"
-    ]
-
-    if new_status not in valid_statuses:
+    if new_status not in VALID_STATUSES:
         raise HTTPException(
             status_code=400,
             detail="Invalid claim status."
         )
+
+    if not can_set_status(role, new_status):
+        logger.warning(
+            "TRANSITION DENIED - role=%s claim=%s target=%s",
+            role,
+            claim_id,
+            new_status,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Role '{role}' is not allowed to move a claim to "
+                f"'{new_status}'."
+            )
+        )
+
+    if claim.claim_status in TERMINAL_STATUSES and not can_reopen(role):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Claim is already '{claim.claim_status}'. "
+                "Only an Admin can reopen a decided claim."
+            )
+        )
+
+    logger.info(
+        "TRANSITION ALLOWED - role=%s claim=%s %s -> %s",
+        role,
+        claim_id,
+        claim.claim_status,
+        new_status,
+    )
 
     claim.claim_status = new_status
 
