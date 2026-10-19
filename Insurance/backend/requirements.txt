@@ -27,3 +27,9 @@ passlib==1.7.4
 psycopg2-binary==2.9.12
 python-jose==3.5.0
 SQLAlchemy==2.0.51
+google-search-results
+langchain-openai
+langchain-core
+langchain-groq
+pytest
+pytest-asyncio

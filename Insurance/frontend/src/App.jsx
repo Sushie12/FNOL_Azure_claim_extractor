@@ -73,6 +73,7 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import ClaimDetails from "./pages/ClaimDetails";
 import UploadClaim from "./pages/UploadClaim";
+import Register from "./pages/Register";
 
 function ProtectedRoute({ children }) {
 const token = localStorage.getItem("token");
@@ -81,6 +82,7 @@ return token ? children : <Navigate to="/login" />;
 
 export default function App() {
 return ( <BrowserRouter> <Routes>
+<Route path="/register" element={<Register />} />
 <Route path="/login" element={<Login />} />
     <Route
       path="/"

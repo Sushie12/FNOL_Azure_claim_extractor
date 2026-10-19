@@ -1,10 +1,3 @@
-#a dummy function for now
-# def extract_to_json_format(file_path):
-#     return {
-#         "status": "Extraction Service Working",
-#         "file": file_path
-#     }
-
 
 import os
 import re
@@ -28,11 +21,12 @@ def extract_to_json_format(file_path):
             features=["queryFields"],
             query_fields=[
                 "PolicyNumber", "InsuredName", "CarrierName", 
-                "LossDate", "LossTime", "LossLocation", "EstimateAmount",
+                "LossDate", "LossTime", "LossLocation","CityStateZip","Country","EstimateAmount",
                 "VehicleMake", "PlateNumber", "AgencyName", "ContactName",
-                "CityStateZip", "InjuredName", "AccidentDescription", "DamageDescription",
+                "InjuredName", "AccidentDescription", "DamageDescription",
                 "InsuredEmail", "ContactEmail"
-            ]
+            ],
+            pages="1-2"
         )
     result = poller.result()
 
@@ -61,7 +55,7 @@ def extract_to_json_format(file_path):
             get_smart("InsuredName")
         ),
         
-        "Carrier": (lambda x: x.strip() if x and "CARRIER" not in x.upper() else "null")(
+        "Carrier": (lambda x: x.strip() if x and x.strip().upper() not in ("CARRIER", "CARRIER NAME") else "null")(
             get_smart("CarrierName")
         ),
         "Insured Email": (lambda x: x.strip() if x and "@" in x else "null")(
@@ -91,9 +85,14 @@ def extract_to_json_format(file_path):
             ) if x and any(c.isdigit() for c in x) else "null"
         )(get_smart("LossTime")),
         
-        "Location": (lambda street, city: f"{street}, {city}" if street and city and not "STREET" in street.upper() else "null")(
-            get_smart("LossLocation"),
+        "Location of Loss Street": (lambda s: s.strip() if s and "STREET" not in s.upper() else "null")(
+            get_smart("LossLocation")
+        ),
+        "City State Zip": (lambda c: c.strip() if c and "CITY" not in c.upper() else "null")(
             get_smart("CityStateZip")
+        ),
+        "Country": (lambda k: k.strip() if k and "COUNTRY" not in k.upper() else "null")(
+            get_smart("Country")
         ),
         
         "Estimate Amount": (lambda x: x if x and any(c.isdigit() for c in x) else "null")(
@@ -104,16 +103,16 @@ def extract_to_json_format(file_path):
             get_smart("VehicleMake")
         ),
         
-        "Plate Number": (lambda x: x.strip() if x and any(c.isdigit() for c in x) else "null")(
-            get_smart("PlateNumber")
-        ),
+        "Plate Number": (lambda x, raw: x.strip() if x and any(c.isdigit() for c in x) else (m.group(1).strip() if (m := re.search(r'(?:PLATE NUMBER|PLATE NO|LICENSE PLATE)\s*[:\.]?\s*([A-Z0-9\-]{4,12})', raw, re.IGNORECASE)) else (m2.group(0).strip() if (m2 := re.search(r'\b[A-Z]{2}[\-\s]?[0-9A-Z]{0,2}[\-\s]?[0-9]{3,4}\b', raw)) else "null")))(
+            get_smart("PlateNumber"), full_text
+         ),
         
         "Contact Name": (lambda x: x.strip() if x and not x.isupper() and "CONTACT" not in x.upper() else "null")(
             get_smart("ContactName")
         ),
         
-        "Agency": (lambda x: x.strip() if x and "AGENCY" not in x.upper() and len(x.strip()) > 2 else "null")(
-            get_smart("AgencyName")
+        "Agency": (lambda x, raw: x.strip() if x and "AGENCY" not in x.upper() else (m.group(1).strip() if (m := re.search(r'\bAGENCY\b[\s\n]*([A-Za-z0-9\s]+?)(?=\s*(?:CONTACT|PHONE|CODE|CARRIER|$))', raw, re.IGNORECASE)) else "null"))(
+            get_smart("AgencyName"), full_text
         ),
         
         "Injured": (lambda x: 
@@ -148,15 +147,16 @@ def extract_to_json_format(file_path):
     if missing:
         route = "Manual Review"
         reason = f"Missing fields: {', '.join(missing)}"
-    elif numeric_estimate < 25000:
-        route = "Fast-Track"
-        reason = f"Estimate Amount- Rs.{all_extracted_data['Estimate Amount']}, is less than Rs.25,000."
     elif investigation_flag:
         route = "Investigation Flag"
         reason = f"Risk keywords found- {', '.join(found_words)}"
     elif all_extracted_data["Injured"]!="null":
         route = "Specialist Queue"
         reason = f"Injured person name-{all_extracted_data['Injured']}. So claim type is 'Injury'"
+    elif numeric_estimate < 25000:
+        route = "Fast-Track"
+        reason = f"Estimate Amount- Rs.{all_extracted_data['Estimate Amount']}, is less than Rs.25,000."
+    
 
     return {
         "extractedFields": {
@@ -169,7 +169,9 @@ def extract_to_json_format(file_path):
             "Incident Information": {
                 "Date Of Loss": all_extracted_data["Date of Loss"],
                 "Time": all_extracted_data["Time"],
-                "Location": all_extracted_data["Location"],
+                "Street": all_extracted_data["Location of Loss Street"],
+                "CityState":all_extracted_data["City State Zip"],
+                "Country":all_extracted_data["Country"],
                 "Estimated Damage": all_extracted_data["Estimate Amount"],
                 "Injured": all_extracted_data["Injured"]
             },

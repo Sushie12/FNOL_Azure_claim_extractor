@@ -63,6 +63,17 @@ def require_admin(
 
     return current_user
 
+def require_admin_or_reviewer(
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role not in ["Admin", "Reviewer"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only Admin or Reviewer can update claim status."
+        )
+
+    return current_user
+
 
 
 # from fastapi import Depends, HTTPException, status

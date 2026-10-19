@@ -18,6 +18,10 @@ services:
     restart: always
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:Password890%40@insurance_postgres:5432/insurance_analyser
     env_file:
       - .env
     depends_on:

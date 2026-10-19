@@ -11,8 +11,8 @@ from app.models.users import User
 import os
 
 from app.schemas.claim import ClaimListResponse,ClaimResponse,UpdateClaimStatusRequest
-from app.services.claim_service import process_claim,list_claims,fetch_claim_by_id,get_dashboard_data,update_claim_status
-from app.utils.auth import get_current_user,require_admin
+from app.services.claim_service import process_claim,list_claims,fetch_claim_by_id,get_dashboard_data as fetch_dashboard_data,update_claim_status
+from app.utils.auth import get_current_user,require_admin,require_admin_or_reviewer
 
 
 from app.logger import logger
@@ -43,7 +43,7 @@ async def upload_pdf(
     db: Session = Depends(get_db)
 ):
     print(f"Authenticated user: {current_user.email}")
-    result = process_claim(file, db)
+    result = await process_claim(file, db)
     
     return result
 
@@ -82,20 +82,22 @@ def get_claim_by_id(
 
 
 
-@router.patch("/claims/{claim_id}/status",response_model=ClaimResponse)
+@router.patch("/claims/{claim_id}/status", response_model=ClaimResponse)
 def update_status(
     claim_id: int,
     request: UpdateClaimStatusRequest,
+    current_user: User = Depends(require_admin_or_reviewer),
     db: Session = Depends(get_db)
 ):
     return update_claim_status(
         db=db,
         claim_id=claim_id,
-        new_status=request.claim_status
+        new_status=request.claim_status,
+        current_user=current_user
     )
 
     
 @router.get("/dashboard")
 def get_dashboard_data(db: Session = Depends(get_db)):
-    return get_dashboard_data(db)
+    return fetch_dashboard_data(db)
     

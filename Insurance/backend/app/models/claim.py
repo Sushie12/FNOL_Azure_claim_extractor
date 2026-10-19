@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean
 from datetime import datetime
 
 from app.database.database import Base
@@ -48,6 +48,12 @@ class Claim(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow
     )
+    
+    #-----------Status change--------
+    reviewer_status_changed = Column(Boolean, default=False, nullable=False)
+
+    status_updated_by_name = Column(String, nullable=True)
+    status_updated_by_role = Column(String, nullable=True)
     
     # ---------- System ----------
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -1,0 +1,9 @@
+{
+  "company_name": "Apex Insurance",
+  "policy_tier": "Standard Auto Coverage",
+  "rules": {
+    "max_allowed_repair_estimate": 15000.00,
+    "inflation_tolerance_percentage": 30.0,
+    "high_risk_threshold_score": 75
+  }
+}

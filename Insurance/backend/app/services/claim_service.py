@@ -5,8 +5,11 @@ from enum import Enum
 
 from app.models.claim import Claim
 from app.schemas.claim import ClaimListResponse,ClaimResponse
+from app.models.users import User
 
 from app.services.extraction_service import extract_to_json_format
+from app.services.claim_agent import evaluate_claim_with_agent
+
 UPLOAD_FOLDER = "uploads"
 
 import os
@@ -14,69 +17,85 @@ import shutil
 
 from app.logger import logger
 
-def process_claim(file:UploadFile,db:Session):
+async def process_claim(file: UploadFile, db: Session):
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    logger.info(f"Received upload request for file: {file.filename}") ######Logged
+    logger.info(f"Received upload request for file: {file.filename}")
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     result = extract_to_json_format(file_path)
     
-    logger.info("Azure Document Intelligence extraction completed successfully.")  ######Logged
+    logger.info("Azure Document Intelligence extraction completed successfully.")
 
     policy = result["extractedFields"]["Policy Information"]
     incident = result["extractedFields"]["Incident Information"]
     parties = result["extractedFields"]["Involved Parties"]
     asset = result["extractedFields"]["Asset Details"]
     
-    #Duplicate claim detection. to detect duplicate records
+    # Duplicate claim detection
     existing_claim = check_duplicate_claim(
         db=db,
-        policy_number=policy["Policy No."],
-        date_of_loss=incident["Date Of Loss"],
-        vehicle_plate_number=asset["Vehicle Plate Number"]
-   )
+        policy_number=policy.get("Policy No."),
+        date_of_loss=incident.get("Date Of Loss"),
+        vehicle_plate_number=asset.get("Vehicle Plate Number")
+    )
     
     if existing_claim:
         raise HTTPException(
-            status_code=409, #valid request,but conficts with the existing state of resource
+            status_code=409,
             detail="Duplicate claim detected. This claim already exists."
         )
     
-    claim=create_claim(policy,incident,parties,asset,result)
+    # Initialize claim record
+    claim = create_claim(policy, incident, parties, asset, result)
     
-    claim_risk_score, risk_level = calculate_claim_risk(
-        policy=policy,
-        incident=incident,
-        asset=asset,
-        recommended_route=result["recommendedRoute"]
+    # --- AGENTIC AI EVALUATION (SerpApi + Policy Rules) ---
+    logger.info("Starting Agentic AI evaluation with SerpApi market pricing check...")
+    
+    # Parse damage amount strictly from incident
+    raw_estimate = incident.get("Estimated Damage") or 0.0
+    try:
+        estimated_damage = float(str(raw_estimate).replace("₹", "").replace("$", "").replace(",", "").strip())
+    except (ValueError, TypeError):
+        estimated_damage = 0.0
+
+    # Get vehicle make strictly from asset
+    vehicle_make = asset.get("Vehicle Make") or "Vehicle"
+    
+    # Extract City State Zip and Country directly from incident
+    city_state_zip = incident.get("City State Zip") or "null"
+    country = incident.get("Country") or "India"
+
+    # Call LLM market analyst passing parameters directly
+    agent_assessment = await evaluate_claim_with_agent(
+        vehicle_make=vehicle_make,
+        estimated_damage=estimated_damage,
+        city_state_zip=city_state_zip,
+        country=country
     )
-    claim_status = get_initial_claim_status(
-        result["recommendedRoute"]
-    )
-    
-    
-    claim.claim_risk_score = claim_risk_score
-    claim.risk_level = risk_level
-    claim.claim_status=claim_status
-    
+
+    # Attach LLM market reasoning directly to claim object
+    claim.reasoning = agent_assessment.marketReasoning
+
+    # Save to database
     db.add(claim)
     db.commit()
     db.refresh(claim)
-    logger.info(f"Claim saved successfully. Claim ID: {claim.id}")   ####Logged
+    
+    logger.info(f"Claim saved successfully. Claim ID: {claim.id}")
     
     return {
-        "message":"Cliam uploaded successfully",
-        "claimId":claim.id,
-        "extractedFields":result["extractedFields"],
-        "recommendedRoute":claim.recommended_route,
-        "reasoning":claim.reasoning,
+        "message": "Claim uploaded and evaluated successfully",
+        "claimId": claim.id,
+        "extractedFields": result["extractedFields"],
+        "recommendedRoute": claim.recommended_route,
+        "reasoning": claim.reasoning,
         "claimRiskScore": claim.claim_risk_score,
         "riskLevel": claim.risk_level,
-        "claimStatus":claim.claim_status
+        "claimStatus": claim.claim_status
     }
     
 
@@ -175,7 +194,8 @@ def create_claim(
         # ---------- Incident Information ----------
         date_of_loss=incident["Date Of Loss"],
         loss_time=incident["Time"],
-        loss_location=incident["Location"],
+        # Combine street, city/state, and country safely:
+        loss_location=f'{incident["Street"]}, {incident["CityState"]}, {incident["Country"]}',
 
         estimated_damage=(
             float(
@@ -366,11 +386,17 @@ def calculate_claim_risk_score(claim: Claim):
 
 def get_initial_claim_status(recommended_route: str):
 
-    if recommended_route == "Investigation Flag":
-        return "Investigation In Progress"
+    if recommended_route == "Fast-Track":
+        return "Auto Approved"
+
+    elif recommended_route == "Manual Review":
+        return "Pending Review"
+
+    elif recommended_route == "Investigation Flag":
+        return "Pending Investigation"
 
     elif recommended_route == "Specialist Queue":
-        return "Specialist Assigned"
+        return "Escalated"
 
     return "Pending Review"
 
@@ -379,7 +405,8 @@ def get_initial_claim_status(recommended_route: str):
 def update_claim_status(
     db: Session,
     claim_id: int,
-    new_status: str
+    new_status: str,
+    current_user:User
 ):
     claim = (
         db.query(Claim)
@@ -392,22 +419,34 @@ def update_claim_status(
             status_code=404,
             detail="Claim not found."
         )
-
+    
     valid_statuses = [
-        "Pending Review",
-        "Investigation In Progress",
-        "Specialist Assigned",
         "Approved",
-        "Rejected"
+        "Rejected",
+        "Escalated"
     ]
-
+    
     if new_status not in valid_statuses:
         raise HTTPException(
             status_code=400,
             detail="Invalid claim status."
         )
+    
+        
+    # Reviewer can update only once
+    if current_user.role == "Reviewer":
+        if claim.reviewer_status_changed:
+            raise HTTPException(
+                status_code=403,
+                detail="Reviewer has already updated the status for this claim."
+            )
 
+        claim.reviewer_status_changed = True
+
+    #Update status
     claim.claim_status = new_status
+    claim.status_updated_by_name = current_user.full_name
+    claim.status_updated_by_role = current_user.role
 
     db.commit()
     db.refresh(claim)
@@ -418,6 +457,26 @@ def update_claim_status(
 def get_dashboard_data(db:Session):
     
     total_claims = db.query(Claim).count()
+    pending_review = (
+    db.query(Claim)
+    .filter(Claim.claim_status == "Pending Review")
+    .count()
+    )
+
+    approved = (
+        db.query(Claim)
+        .filter(
+            Claim.claim_status.in_(["Approved", "Auto Approved"])
+        )
+        .count()
+    )
+
+    rejected = (
+        db.query(Claim)
+        .filter(Claim.claim_status == "Rejected")
+        .count()
+    )
+    
     
     route_distribution = (
         db.query(
@@ -434,8 +493,7 @@ def get_dashboard_data(db:Session):
         }
         for route, count in route_distribution
     ]
-    
-    
+
     
     recent_claims = (
         db.query(Claim)
@@ -491,6 +549,9 @@ def get_dashboard_data(db:Session):
     
     return {
     "totalClaims": total_claims,
+    "pendingReview": pending_review,
+    "approved": approved,
+    "rejected": rejected,
     "routeDistribution":route_distribution,   
     
     "recentClaims": [
@@ -500,6 +561,7 @@ def get_dashboard_data(db:Session):
             "carrier": claim.carrier,
             "estimated_damage": claim.estimated_damage,
             "recommended_route": claim.recommended_route,
+            "claim_status":claim.claim_status,
             "created_at": claim.created_at
         }
         for claim in recent_claims

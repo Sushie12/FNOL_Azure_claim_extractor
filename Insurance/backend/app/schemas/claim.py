@@ -36,6 +36,10 @@ class ClaimResponse(BaseModel):
 
     claim_status: str | None
     last_updated: datetime | None
+    
+    reviewer_status_changed:bool|None
+    status_updated_by_name: str | None
+    status_updated_by_role: str | None
 
     # ---------- System ----------
     created_at: datetime
