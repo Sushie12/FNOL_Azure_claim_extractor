@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Depends
+from fastapi import APIRouter, UploadFile, File, Depends,HTTPException
 from sqlalchemy.orm import Session
 
 from enum import Enum
@@ -101,3 +101,17 @@ def update_status(
 def get_dashboard_data(db: Session = Depends(get_db)):
     return fetch_dashboard_data(db)
     
+
+@router.delete("/claims/{claim_id}")
+def delete_claim(
+    claim_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    claim = db.query(Claim).filter(Claim.id == claim_id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    
+    db.delete(claim)
+    db.commit()
+    return {"message": f"Claim #{claim_id} deleted successfully"}
