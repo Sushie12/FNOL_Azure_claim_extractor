@@ -1,59 +1,100 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean
-from datetime import datetime
+# from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean
+# from datetime import datetime
 
+# from app.database.database import Base
+
+
+# class Claim(Base):
+#     __tablename__ = "claims"
+
+#     # ---------- Primary Key ----------
+#     id = Column(Integer, primary_key=True, index=True)
+
+#     # ---------- Policy Information ----------
+#     policy_number = Column(String(100), nullable=True)
+#     policyholder_name = Column(String(100), nullable=True)
+#     policyholder_email = Column(String(150), nullable=True)
+#     carrier = Column(String(100), nullable=True)
+
+#     # ---------- Incident Information ----------
+#     date_of_loss = Column(String(50), nullable=True)
+#     loss_time = Column(String(50), nullable=True)
+#     loss_location = Column(String(255), nullable=True)
+#     estimated_damage = Column(Float, nullable=True)
+#     injured_name = Column(String(150), nullable=True)
+
+#     # ---------- Involved Parties ----------
+#     agency = Column(String(150), nullable=True)
+#     contact_name = Column(String(150), nullable=True)
+#     contact_email = Column(String(150), nullable=True)
+
+#     # ---------- Asset Details ----------
+#     vehicle_make = Column(String(100), nullable=True)
+#     vehicle_plate_number = Column(String(100), nullable=True)
+
+#     # ---------- Decision ----------
+#     recommended_route = Column(String(100), nullable=True)
+#     reasoning = Column(Text, nullable=True)
+    
+#     #----------Claim risk------------
+#     claim_risk_score = Column(Integer, nullable=True)
+#     risk_level = Column(String(20), nullable=True)
+    
+#     # ---------- Claim Workflow ----------
+#     claim_status = Column(String(30), nullable=True)
+
+#     last_updated = Column(
+#         DateTime,
+#         default=datetime.utcnow,
+#         onupdate=datetime.utcnow
+#     )
+    
+#     #-----------Status change--------
+#     reviewer_status_changed = Column(Boolean, default=False, nullable=False)
+
+#     status_updated_by_name = Column(String, nullable=True)
+#     status_updated_by_role = Column(String, nullable=True)
+    
+#     # ---------- System ----------
+#     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+
+
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean, JSON
 from app.database.database import Base
 
+def utc_now():
+    return datetime.now(timezone.utc)
 
 class Claim(Base):
     __tablename__ = "claims"
 
-    # ---------- Primary Key ----------
+    # Primary Key
     id = Column(Integer, primary_key=True, index=True)
 
-    # ---------- Policy Information ----------
-    policy_number = Column(String(100), nullable=True)
+    # Core Indexed Columns (For Search, Filtering, and Sorting)
+    policy_number = Column(String(100), nullable=True, index=True)
     policyholder_name = Column(String(100), nullable=True)
-    policyholder_email = Column(String(150), nullable=True)
-    carrier = Column(String(100), nullable=True)
-
-    # ---------- Incident Information ----------
-    date_of_loss = Column(String(50), nullable=True)
-    loss_time = Column(String(50), nullable=True)
-    loss_location = Column(String(255), nullable=True)
+    carrier = Column(String(100), nullable=True, index=True)
     estimated_damage = Column(Float, nullable=True)
-    injured_name = Column(String(150), nullable=True)
 
-    # ---------- Involved Parties ----------
-    agency = Column(String(150), nullable=True)
-    contact_name = Column(String(150), nullable=True)
-    contact_email = Column(String(150), nullable=True)
-
-    # ---------- Asset Details ----------
-    vehicle_make = Column(String(100), nullable=True)
-    vehicle_plate_number = Column(String(100), nullable=True)
-
-    # ---------- Decision ----------
+    # AI Decision & Routing
     recommended_route = Column(String(100), nullable=True)
     reasoning = Column(Text, nullable=True)
-    
-    #----------Claim risk------------
     claim_risk_score = Column(Integer, nullable=True)
     risk_level = Column(String(20), nullable=True)
-    
-    # ---------- Claim Workflow ----------
-    claim_status = Column(String(30), nullable=True)
 
-    last_updated = Column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
-    )
-    
-    #-----------Status change--------
+    # Workflow Status & Audit
+    claim_status = Column(String(30), nullable=True, index=True)
     reviewer_status_changed = Column(Boolean, default=False, nullable=False)
-
     status_updated_by_name = Column(String, nullable=True)
     status_updated_by_role = Column(String, nullable=True)
-    
-    # ---------- System ----------
-    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Flexible Storage for ALL 50+ Raw Extracted Fields
+    raw_extracted_fields = Column(JSON, nullable=True)
+
+    # Timestamps
+    last_updated = Column(DateTime, default=utc_now, onupdate=utc_now)
+    created_at = Column(DateTime, default=utc_now)

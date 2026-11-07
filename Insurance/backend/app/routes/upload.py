@@ -11,7 +11,8 @@ from app.models.users import User
 import os
 
 from app.schemas.claim import ClaimListResponse,ClaimResponse,UpdateClaimStatusRequest
-from app.services.claim_service import process_claim,list_claims,fetch_claim_by_id,get_dashboard_data as fetch_dashboard_data,update_claim_status
+from app.services.claim_service import process_claim,list_claims,fetch_claim_by_id,update_claim_status
+from app.services.dashboard_service import get_dashboard_data as fetch_dashboard_data
 from app.utils.auth import get_current_user,require_admin,require_admin_or_reviewer
 
 
